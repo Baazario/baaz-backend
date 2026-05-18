@@ -18,7 +18,16 @@
       "root": "apps/auth-service",
       "entryFile": "main",
       "sourceRoot": "apps/auth-service/src",
-      "compilerOptions": { "tsConfigPath": "apps/auth-service/tsconfig.app.json" }
+      "compilerOptions": {
+        "tsConfigPath": "apps/auth-service/tsconfig.app.json",
+        "assets": [
+          {
+            "include": "generated/**/*",
+            "outDir": "./dist/apps/auth-service/apps/auth-service/src",
+            "watchAssets": true
+          }
+        ]
+      }
     },
     "seller-service": {
       "type": "application",
