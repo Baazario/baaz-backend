@@ -7,6 +7,7 @@ import { CommonModule, HealthModule } from '@baaz/common';
 import { JwtAuthGuard } from './guards/jwt.guard';
 import { ServiceClientsModule } from './clients/clients.module';
 import { HealthProxyModule } from './health-proxy/health-proxy.module';
+import { AuthProxyModule } from './auth-proxy/auth-proxy.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { HealthProxyModule } from './health-proxy/health-proxy.module';
     ServiceClientsModule,
 
     HealthProxyModule,
+    AuthProxyModule,
     CommonModule,
     HealthModule,
   ],

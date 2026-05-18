@@ -5,9 +5,66 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("ORDER_DATABASE_URL")
 }
 
-// Models are added per sprint.
-// This service owns the "order" PostgreSQL schema.
-// First migration: CREATE SCHEMA IF NOT EXISTS "order";
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum OrderStatus {
+  PENDING           // created, awaiting payment
+  CONFIRMED         // payment received
+  PROCESSING        // seller is preparing the order
+  SHIPPED           // handed to logistics
+  DELIVERED
+  CANCELLED
+  REFUND_REQUESTED
+  REFUNDED
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model Order {
+  id              String      @id @default(uuid())
+  userId          String      // references auth-service User.id
+  status          OrderStatus @default(PENDING)
+  totalInPaise    Int
+  shippingAddress Json        // snapshot of address at time of order
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  items         OrderItem[]
+  statusHistory OrderStatusHistory[]
+
+  @@index([userId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id               String   @id @default(uuid())
+  orderId          String
+  variantId        String   // references catalog-service ProductVariant.id
+  productName      String   // snapshot — name at time of order
+  variantName      String   // snapshot — variant name at time of order
+  quantity         Int
+  unitPriceInPaise Int      // snapshot — price at time of order
+  totalInPaise     Int      // quantity * unitPriceInPaise
+  createdAt        DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id        String      @id @default(uuid())
+  orderId   String
+  status    OrderStatus
+  note      String?
+  createdAt DateTime    @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("order_status_history")
+}

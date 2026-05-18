@@ -21,8 +21,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
       this.logException(exception);
       return throwError(() =>
         exception instanceof AppException
-          ? { errorCode: exception.errorCode, message: exception.message, meta: exception.meta }
-          : { errorCode: ErrorCode.INTERNAL_ERROR, message: 'Internal server error' },
+          ? { statusCode: exception.statusCode, errorCode: exception.errorCode, message: exception.message, meta: exception.meta }
+          : { statusCode: HttpStatus.INTERNAL_SERVER_ERROR, errorCode: ErrorCode.INTERNAL_ERROR, message: 'Internal server error' },
       );
     }
 

@@ -5,9 +5,69 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("PAYMENT_DATABASE_URL")
 }
 
-// Models are added per sprint.
-// This service owns the "payment" PostgreSQL schema.
-// First migration: CREATE SCHEMA IF NOT EXISTS "payment";
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  UPI
+  CARD
+  NET_BANKING
+  WALLET
+  COD
+}
+
+enum RefundStatus {
+  REQUESTED
+  PROCESSING
+  SUCCESS
+  FAILED
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model Payment {
+  id               String        @id @default(uuid())
+  orderId          String        @unique  // references order-service Order.id
+  userId           String        // references auth-service User.id
+  amountInPaise    Int
+  method           PaymentMethod
+  status           PaymentStatus @default(PENDING)
+  gatewayOrderId   String?       // ID issued by Razorpay / Stripe before payment
+  gatewayPaymentId String?       // confirmed payment ID from gateway
+  failureReason    String?
+  paidAt           DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  refunds Refund[]
+
+  @@index([orderId])
+  @@index([userId])
+  @@map("payments")
+}
+
+model Refund {
+  id              String       @id @default(uuid())
+  paymentId       String
+  amountInPaise   Int
+  reason          String
+  status          RefundStatus @default(REQUESTED)
+  gatewayRefundId String?
+  processedAt     DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@map("refunds")
+}

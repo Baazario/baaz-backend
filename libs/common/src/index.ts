@@ -11,3 +11,5 @@ export * from './config/env.validation';
 export * from './config/logger.options';
 export * from './health/health.module';
 export * from './health/health.controller';
+export * from './redis/redis.module';
+export * from './redis/redis.service';

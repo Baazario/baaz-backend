@@ -1,6 +1,6 @@
-import { Controller, Inject } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { MessagePattern } from '@nestjs/microservices';
-import Redis from 'ioredis';
+import { RedisService } from '@baaz/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 interface HealthResponse {
@@ -14,12 +14,12 @@ interface HealthResponse {
 export class HealthController {
   constructor(
     private readonly prisma: PrismaService,
-    @Inject('REDIS_CLIENT') private readonly redis: Redis,
+    private readonly redis: RedisService,
   ) {}
 
   @MessagePattern({ cmd: 'health.check' })
   async check(): Promise<HealthResponse> {
-    const [db, redis] = await Promise.all([this.checkDb(), this.checkRedis()]);
+    const [db, redis] = await Promise.all([this.checkDb(), this.redis.ping()]);
     return {
       status: db && redis ? 'ok' : 'degraded',
       checks: { db, redis },
@@ -32,14 +32,6 @@ export class HealthController {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
       return true;
-    } catch {
-      return false;
-    }
-  }
-
-  private async checkRedis(): Promise<boolean> {
-    try {
-      return (await this.redis.ping()) === 'PONG';
     } catch {
       return false;
     }

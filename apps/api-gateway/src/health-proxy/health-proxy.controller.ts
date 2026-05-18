@@ -22,7 +22,6 @@ const SERVICE_MAP: Record<string, string> = {
   notification: NOTIFICATION_SERVICE,
 };
 
-@Public()
 @Controller('health')
 export class HealthProxyController {
   constructor(
@@ -35,6 +34,7 @@ export class HealthProxyController {
     @Inject(NOTIFICATION_SERVICE) private readonly notificationClient: ClientProxy,
   ) {}
 
+  @Public()
   @Get('services')
   async checkAll() {
     const clients: Record<string, ClientProxy> = {
@@ -57,6 +57,7 @@ export class HealthProxyController {
     return Object.fromEntries(entries);
   }
 
+  @Public()
   @Get('services/:service')
   async checkOne(@Param('service') service: string) {
     const token = SERVICE_MAP[service];

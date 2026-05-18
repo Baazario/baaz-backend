@@ -5,9 +5,51 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("LOGISTICS_DATABASE_URL")
 }
 
-// Models are added per sprint.
-// This service owns the "logistics" PostgreSQL schema.
-// First migration: CREATE SCHEMA IF NOT EXISTS "logistics";
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum ShipmentStatus {
+  PENDING           // order confirmed, not yet picked up
+  PICKED_UP
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  FAILED_DELIVERY
+  RETURNED
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model Shipment {
+  id             String         @id @default(uuid())
+  orderId        String         @unique  // references order-service Order.id
+  trackingNumber String?        @unique
+  carrier        String?        // "Delhivery", "BlueDart", etc.
+  status         ShipmentStatus @default(PENDING)
+  estimatedAt    DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  events TrackingEvent[]
+
+  @@index([orderId])
+  @@map("shipments")
+}
+
+model TrackingEvent {
+  id          String   @id @default(uuid())
+  shipmentId  String
+  status      String   // raw status string from the carrier API
+  description String
+  location    String?
+  occurredAt  DateTime
+  createdAt   DateTime @default(now())
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId])
+  @@map("tracking_events")
+}
