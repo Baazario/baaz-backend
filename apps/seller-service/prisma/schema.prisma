@@ -5,9 +5,76 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("SELLER_DATABASE_URL")
 }
 
-// Models are added per sprint.
-// This service owns the "seller" PostgreSQL schema.
-// First migration: CREATE SCHEMA IF NOT EXISTS "seller";
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum SellerStatus {
+  PENDING    // application submitted, awaiting KYC review
+  ACTIVE
+  SUSPENDED
+  REJECTED
+}
+
+enum KycStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum KycDocumentType {
+  PAN
+  AADHAAR
+  GST_CERTIFICATE
+  BANK_STATEMENT
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model Seller {
+  id           String       @id @default(uuid())
+  userId       String       @unique  // references auth-service User.id
+  businessName String
+  gstin        String?      @unique
+  status       SellerStatus @default(PENDING)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  bankAccounts BankAccount[]
+  kycDocuments KycDocument[]
+
+  @@map("sellers")
+}
+
+model BankAccount {
+  id            String   @id @default(uuid())
+  sellerId      String
+  accountNumber String
+  ifscCode      String
+  bankName      String
+  accountHolder String
+  isPrimary     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  seller Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@index([sellerId])
+  @@map("bank_accounts")
+}
+
+model KycDocument {
+  id         String          @id @default(uuid())
+  sellerId   String
+  type       KycDocumentType
+  fileUrl    String
+  status     KycStatus       @default(PENDING)
+  reviewNote String?
+  reviewedAt DateTime?
+  createdAt  DateTime        @default(now())
+
+  seller Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@index([sellerId])
+  @@map("kyc_documents")
+}

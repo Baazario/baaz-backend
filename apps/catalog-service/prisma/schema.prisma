@@ -5,9 +5,74 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("CATALOG_DATABASE_URL")
 }
 
-// Models are added per sprint.
-// This service owns the "catalog" PostgreSQL schema.
-// First migration: CREATE SCHEMA IF NOT EXISTS "catalog";
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  DELETED
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String
+  slug        String    @unique
+  description String?
+  imageUrl    String?
+  parentId    String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
+  products Product[]
+
+  @@index([parentId])
+  @@map("categories")
+}
+
+model Product {
+  id          String        @id @default(uuid())
+  sellerId    String        // references seller-service Seller.id
+  categoryId  String
+  name        String
+  slug        String        @unique
+  description String?
+  imageUrls   String[]
+  status      ProductStatus @default(DRAFT)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  category Category        @relation(fields: [categoryId], references: [id])
+  variants ProductVariant[]
+
+  @@index([sellerId])
+  @@index([categoryId])
+  @@map("products")
+}
+
+model ProductVariant {
+  id             String   @id @default(uuid())
+  productId      String
+  sku            String   @unique
+  name           String   // e.g. "Blue / XL"
+  priceInPaise   Int      // stored in paise — no floats
+  stock          Int      @default(0)
+  attributes     Json     // { "color": "blue", "size": "XL" }
+  imageUrl       String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("product_variants")
+}

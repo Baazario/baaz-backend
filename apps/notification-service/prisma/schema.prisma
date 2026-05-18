@@ -5,9 +5,55 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("NOTIFICATION_DATABASE_URL")
 }
 
-// Models are added per sprint.
-// This service owns the "notification" PostgreSQL schema.
-// First migration: CREATE SCHEMA IF NOT EXISTS "notification";
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  PUSH
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model NotificationTemplate {
+  id        String              @id @default(uuid())
+  name      String              @unique  // e.g. "otp_verification", "order_confirmed"
+  channel   NotificationChannel
+  subject   String?             // used for EMAIL channel
+  body      String              // handlebars template: "Your OTP is {{otp}}"
+  isActive  Boolean             @default(true)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  logs NotificationLog[]
+
+  @@map("notification_templates")
+}
+
+model NotificationLog {
+  id         String              @id @default(uuid())
+  templateId String
+  userId     String              // references auth-service User.id
+  channel    NotificationChannel
+  recipient  String              // email address or phone number
+  payload    Json                // variables passed to the template
+  status     NotificationStatus  @default(PENDING)
+  failReason String?
+  sentAt     DateTime?
+  createdAt  DateTime            @default(now())
+
+  template NotificationTemplate @relation(fields: [templateId], references: [id])
+
+  @@index([userId])
+  @@index([templateId])
+  @@map("notification_logs")
+}
